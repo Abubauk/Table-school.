@@ -1,0 +1,1220 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Табель школы</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: one column, up to 760px. Chalkboard panel = current state, ruled timesheet (табель) = history, month grid for the director. Status colors are separate from the brass bell accent. */
+:root {
+  --bg: #e8eef0;
+  --surface: #fbfcfc;
+  --surface-2: #eef3f4;
+  --ink: #14232b;
+  --muted: #566a73;
+  --line: #d0dadd;
+  --board: #1c4a40;
+  --board-2: #26604f;
+  --board-ink: #f2f7f4;
+  --board-muted: #a7c6bc;
+  --in: #1d7849;
+  --out: #b8452d;
+  --late: #c27a0a;
+  --vac: #2c6fb7;
+  --sick: #b0415f;
+  --off: #6d5aa8;
+  --bell: #c48a0e;
+  --on-solid: #ffffff;
+  --warn-bg: #fbefd2;
+  --warn-ink: #75500a;
+  --err-bg: #fbe6e1;
+  --err-ink: #8c2917;
+  --focus: #2b6fd6;
+  --f-body: "Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --f-display: "Unbounded", "Golos Text", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e171b;
+    --surface: #17252b;
+    --surface-2: #1d2f36;
+    --ink: #e6eff1;
+    --muted: #92a6ae;
+    --line: #2a3c43;
+    --board: #0d2f29;
+    --board-2: #164a3f;
+    --board-ink: #eef6f2;
+    --board-muted: #8fb5a9;
+    --in: #3aa874;
+    --out: #d4634a;
+    --late: #e0a03a;
+    --vac: #5b9be0;
+    --sick: #e0708f;
+    --off: #9d8be0;
+    --bell: #e2ae45;
+    --warn-bg: #3a2f17;
+    --warn-ink: #f0c98a;
+    --err-bg: #3d2420;
+    --err-ink: #f3a898;
+    --focus: #7aa8f0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e171b;
+  --surface: #17252b;
+  --surface-2: #1d2f36;
+  --ink: #e6eff1;
+  --muted: #92a6ae;
+  --line: #2a3c43;
+  --board: #0d2f29;
+  --board-2: #164a3f;
+  --board-ink: #eef6f2;
+  --board-muted: #8fb5a9;
+  --in: #3aa874;
+  --out: #d4634a;
+  --late: #e0a03a;
+  --vac: #5b9be0;
+  --sick: #e0708f;
+  --off: #9d8be0;
+  --bell: #e2ae45;
+  --warn-bg: #3a2f17;
+  --warn-ink: #f0c98a;
+  --err-bg: #3d2420;
+  --err-ink: #f3a898;
+  --focus: #7aa8f0;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.45 var(--f-body);
+  padding-inline: 16px;
+  padding-block: 18px 48px;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.wrap .wrap { width: 100%; margin: 0; }
+h1, h2, h3, p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; }
+button:disabled { opacity: 0.6; cursor: default; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.muted { color: var(--muted); }
+
+/* ---------- шапка и вкладки ---------- */
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand svg { width: 26px; height: 26px; color: var(--bell); flex: none; }
+.brand-name { font: 700 18px/1 var(--f-display); letter-spacing: -0.01em; }
+.bar-r { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.who { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ghost {
+  flex: none;
+  padding: 8px 13px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1.5px solid var(--line);
+  color: var(--muted);
+  font-size: 15px;
+}
+.ghost:hover { color: var(--ink); border-color: var(--muted); }
+
+.tabs { display: flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.tab { flex: 1; padding: 10px 6px; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 600; font-size: 15px; }
+.tab.on { background: var(--board); color: var(--board-ink); }
+
+.back { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.page-title { font: 700 20px/1.2 var(--f-display); overflow-wrap: anywhere; }
+
+/* ---------- общие блоки ---------- */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.panel-h h2 { font: 700 16px/1.2 var(--f-display); }
+.kicker { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.msg { padding: 11px 14px; border-radius: 10px; font-size: 15px; }
+.msg.err { background: var(--err-bg); color: var(--err-ink); }
+.msg.warn { background: var(--warn-bg); color: var(--warn-ink); }
+
+label { font-size: 14px; font-weight: 600; }
+input, select {
+  width: 100%;
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  min-height: 46px;
+}
+select { width: auto; min-width: 0; padding: 9px 12px; min-height: 40px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.solid { padding: 14px; border-radius: 10px; background: var(--board); color: var(--board-ink); font-weight: 700; }
+.mini { padding: 7px 12px; border-radius: 8px; background: var(--board); color: var(--board-ink); font-weight: 600; font-size: 14px; }
+.mini.plain { background: transparent; border: 1.5px solid var(--line); color: var(--muted); }
+.mini.danger { background: var(--out); color: #fff; }
+.link { background: none; color: var(--ink); font-weight: 600; text-align: left; padding: 0; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+
+.chip {
+  --c: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  background: color-mix(in srgb, var(--c) 16%, var(--surface));
+  color: color-mix(in srgb, var(--c) 72%, var(--ink));
+  white-space: nowrap;
+}
+.chip.in { --c: var(--in); }
+.chip.late, .chip.warn { --c: var(--late); }
+.chip.vacation { --c: var(--vac); }
+.chip.sick { --c: var(--sick); }
+.chip.dayoff { --c: var(--off); }
+.chip.out, .chip.none, .chip.rest { --c: var(--muted); }
+.chip.sm { padding: 1px 8px; font-size: 12px; }
+
+/* ---------- вход ---------- */
+.login { min-height: 80vh; justify-content: center; }
+.hero { background: radial-gradient(120% 140% at 0% 0%, var(--board-2) 0%, var(--board) 58%); color: var(--board-ink); border-radius: 16px; padding: 24px 22px 26px; display: flex; flex-direction: column; gap: 10px; }
+.hero svg { width: 34px; height: 34px; color: var(--bell); }
+.hero h1 { font: 700 38px/1.05 var(--f-display); letter-spacing: -0.02em; }
+.hero p { color: var(--board-muted); max-width: 36ch; }
+form.panel { gap: 6px; }
+form .field + .field { margin-top: 8px; }
+form .solid { margin-top: 14px; }
+
+/* ---------- доска «Сегодня» ---------- */
+.board { background: radial-gradient(120% 140% at 0% 0%, var(--board-2) 0%, var(--board) 60%); color: var(--board-ink); border-radius: 16px; padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 10px; }
+.board-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; color: var(--board-muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--board-muted); }
+.board.in .pill { color: var(--board-ink); }
+.board.in .dot { background: var(--bell); box-shadow: 0 0 0 4px rgba(226, 174, 69, 0.28); }
+@media (prefers-reduced-motion: no-preference) {
+  .board.in .dot { animation: ring 2.4s ease-in-out infinite; }
+  @keyframes ring { 50% { box-shadow: 0 0 0 7px rgba(226, 174, 69, 0.08); } }
+}
+.board .date { font-size: 14px; color: var(--board-muted); }
+.clock { font: 700 40px/1.1 var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; margin-top: 4px; }
+.note { font-size: 15px; color: var(--board-muted); min-height: 22px; }
+.board .chip { background: rgba(255, 255, 255, 0.14); color: var(--board-ink); }
+.board .chip.late { background: rgba(226, 174, 69, 0.22); color: #ffe2a6; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.act { width: 100%; padding: 20px; border-radius: 16px; font-size: 22px; font-weight: 700; color: var(--on-solid); }
+.act.in { background: var(--in); }
+.act.out { background: var(--out); }
+
+/* ---------- плитки ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+@media (max-width: 520px) { .tiles > .tile:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tile-l { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.tile-v { font: 700 22px/1.15 var(--f-display); font-variant-numeric: tabular-nums; }
+.tile-s { font-size: 13px; color: var(--muted); }
+.prog { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-top: 4px; }
+.prog i { display: block; height: 100%; background: var(--in); border-radius: 999px; }
+
+/* ---------- шкала дня ---------- */
+.tl { display: flex; flex-direction: column; gap: 6px; }
+.tl-track { position: relative; height: 26px; border-radius: 8px; background: var(--surface-2); overflow: hidden; }
+.tl.compact .tl-track { height: 16px; border-radius: 6px; }
+.tl-seg, .tl-late, .tl-mark, .tl-now { position: absolute; top: 0; bottom: 0; }
+.tl-seg { background: var(--in); border-radius: 4px; min-width: 4px; }
+.tl-seg.open { background: repeating-linear-gradient(135deg, var(--in) 0 6px, color-mix(in srgb, var(--in) 70%, var(--surface)) 6px 12px); }
+.tl-late { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--late) 55%, transparent) 0 4px, transparent 4px 8px); }
+.tl-mark { width: 2px; background: var(--bell); }
+.tl-now { width: 2px; background: var(--ink); opacity: 0.8; }
+.tl-axis { position: relative; height: 14px; font-size: 11px; color: var(--muted); }
+.tl-axis span { position: absolute; transform: translateX(-50%); font-variant-numeric: tabular-nums; }
+.tl-axis span.mk { color: var(--bell); font-weight: 700; }
+.tl.compact .tl-axis { display: none; }
+
+/* ---------- график недели ---------- */
+.wk-nav { display: flex; align-items: center; gap: 6px; }
+.wk-nav button { width: 36px; height: 36px; border-radius: 10px; background: var(--surface-2); color: var(--ink); font-size: 18px; line-height: 1; }
+.wk-title { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 8.5em; text-align: center; }
+.chart { width: 100%; height: auto; display: block; }
+.chart .g-line { stroke: var(--line); stroke-width: 1; }
+.chart .g-norm { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+.chart text { font-family: var(--f-body); font-variant-numeric: tabular-nums; }
+.chart .ax { fill: var(--muted); font-size: 10.5px; }
+.chart .ax-norm { fill: var(--muted); font-size: 10.5px; }
+.chart .val { fill: var(--ink); font-size: 11px; font-weight: 600; }
+.chart .dl { fill: var(--ink); font-size: 11px; font-weight: 600; }
+.chart .dl.we, .chart .dn.we { fill: var(--muted); }
+.chart .dn { fill: var(--muted); font-size: 11px; }
+.chart .dl.today, .chart .dn.today { fill: var(--bell); font-weight: 700; }
+.chart .bar.ok { fill: var(--in); }
+.chart .bar.late { fill: var(--late); }
+.chart .bar.ab { opacity: 0.2; }
+.chart .bar.ab.vacation { fill: var(--vac); }
+.chart .bar.ab.sick { fill: var(--sick); }
+.chart .bar.ab.dayoff { fill: var(--off); }
+.chart .ab-l { fill: var(--ink); font-size: 13px; font-weight: 700; }
+.legend { display: flex; gap: 8px 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 4px; background: var(--in); display: inline-block; }
+.sw.late { background: var(--late); }
+.sw.vacation { background: var(--vac); }
+.sw.sick { background: var(--sick); }
+.sw.dayoff { background: var(--off); }
+.sw.miss { background: transparent; border: 1.5px dashed var(--late); }
+.sw.rest { background: var(--surface-2); border: 1px solid var(--line); }
+
+/* ---------- таблицы ---------- */
+.scroll { overflow-x: auto; max-width: 100%; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 10px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+td.d { font-weight: 600; min-width: 7.5em; }
+td.nw, td.nw .cellbox { white-space: nowrap; }
+.cellbox { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.fix { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.fix input { width: 7.5em; min-height: 38px; padding: 6px 10px; }
+.empty { color: var(--muted); text-align: center; padding: 20px 0 6px; }
+.sum td, .sum th { white-space: nowrap; }
+.sum small { color: var(--muted); }
+
+/* ---------- сетка месяца ---------- */
+.grid-scroll { overflow-x: auto; max-width: 100%; padding-bottom: 4px; }
+table.grid { width: auto; border-collapse: collapse; }
+.grid th, .grid td { padding: 2px 1.5px; border: 0; text-align: center; vertical-align: middle; }
+.g-name { position: sticky; left: 0; z-index: 1; background: var(--surface); text-align: left !important; min-width: 96px; padding-right: 8px !important; }
+.g-name .link { font-size: 14px; }
+.g-day { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0; text-transform: none; }
+.g-day span { display: block; text-transform: uppercase; font-size: 10px; }
+.g-day b { display: block; font-size: 13px; color: var(--ink); }
+.g-day.we b, .g-day.we span { color: var(--muted); opacity: 0.7; }
+.g-day.today b { color: var(--bell); }
+.cell { --c: var(--muted); width: 33px; height: 34px; border-radius: 8px; padding: 0; background: var(--surface-2); color: var(--muted); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cell.ok, .cell.late, .cell.vacation, .cell.sick, .cell.dayoff { background: color-mix(in srgb, var(--c) 26%, var(--surface)); color: color-mix(in srgb, var(--c) 72%, var(--ink)); }
+.cell.ok { --c: var(--in); }
+.cell.late { --c: var(--late); }
+.cell.vacation { --c: var(--vac); }
+.cell.sick { --c: var(--sick); }
+.cell.dayoff { --c: var(--off); }
+.cell.miss { background: transparent; border: 1.5px dashed var(--late); color: var(--late); }
+.cell.we { background: transparent; opacity: 0.5; }
+.cell.fut { background: transparent; border: 1px dashed var(--line); }
+.cell.today { box-shadow: 0 0 0 2px var(--bell); }
+.cell.sel { outline: 3px solid var(--focus); outline-offset: 1px; }
+.detail { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.detail h3 { font-size: 15px; }
+.detail ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-variant-numeric: tabular-nums; }
+
+/* ---------- карточки работников ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.wcard { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.wcard:hover { border-color: var(--muted); }
+.wc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.wc-name { font: 700 16px/1.2 var(--f-display); }
+.wc-sub { font-size: 14px; color: var(--muted); display: flex; gap: 6px 8px; flex-wrap: wrap; align-items: center; }
+.wc-foot { font-size: 14px; display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wc-foot b { color: var(--ink); }
+
+/* ---------- отсутствия ---------- */
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.abs-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.abs-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.abs-item:last-child { border-bottom: 0; }
+.abs-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.abs-main .rng { font-weight: 600; font-variant-numeric: tabular-nums; }
+.abs-main .nt { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.abs-act { display: flex; gap: 6px; align-items: center; }
+
+/* ---------- уведомление ---------- */
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 11px 16px; border-radius: 12px; font-size: 15px; font-weight: 600; opacity: 0; visibility: hidden; transition: opacity 0.2s, transform 0.2s; max-width: calc(100vw - 32px); z-index: 50; }
+.toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+.toast.err { background: var(--out); color: #fff; }
+
+@media (max-width: 420px) {
+  .hero h1 { font-size: 32px; }
+  .clock { font-size: 34px; }
+  .who { display: none; }
+  th, td { padding: 9px 4px; font-size: 15px; }
+}
+</style>
+
+<main id="app"></main>
+
+<script>
+(() => {
+  'use strict';
+
+  const TZ = 'Europe/Moscow';
+  const START_MIN = 8 * 60 + 30; // опоздание: приход позже 8:30
+  const NORM_H = 8;
+  const TL_FROM = 7 * 60;
+  const TL_TO = 19 * 60;
+  const CELL_W = 36;
+
+  // Версия для просмотра: логины проверяются на самой странице.
+  const USERS = {
+    rabotnik1: { name: 'Работник 1', pass: 'dfn7sp9x', role: 'worker' },
+    rabotnik2: { name: 'Работник 2', pass: '6hp8p837', role: 'worker' },
+    rabotnik3: { name: 'Работник 3', pass: 'yepnegxa', role: 'worker' },
+    director: { name: 'Директор', pass: 'hq4yb8wyfr', role: 'director' },
+  };
+  const WORKERS = ['rabotnik1', 'rabotnik2', 'rabotnik3'];
+  const ABS = {
+    vacation: { label: 'Отпуск', short: 'О' },
+    sick: { label: 'Больничный', short: 'Б' },
+    dayoff: { label: 'Отгул', short: 'Г' },
+  };
+  const WD_SHORT = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+
+  const app = document.getElementById('app');
+  const useCap = async (name) => {
+    try { return window.claude && window.claude.use ? await window.claude.use(name) : null; }
+    catch (e) { return null; }
+  };
+  const dbReady = useCap('db');
+  const dlReady = useCap('downloads');
+
+  // ---------- построение разметки ----------
+  function h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === 'class') el.className = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else if (v !== false && v != null) el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const c of kids.flat()) {
+      if (c == null || c === false) continue;
+      el.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }
+    return el;
+  }
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  function sv(tag, attrs, ...kids) {
+    const el = document.createElementNS(SVGNS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+    for (const c of kids) if (c != null) el.append(c.nodeType ? c : document.createTextNode(String(c)));
+    return el;
+  }
+  const BELL = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5a1.5 1.5 0 0 1 1.5 1.5v.3A6.5 6.5 0 0 1 18.5 10.6V14l1.7 2.6a.9.9 0 0 1-.76 1.4H4.56a.9.9 0 0 1-.76-1.4L5.5 14v-3.4A6.5 6.5 0 0 1 10.5 4.3V4A1.5 1.5 0 0 1 12 2.5ZM9.6 19h4.8a2.4 2.4 0 0 1-4.8 0Z"/></svg>';
+
+  // ---------- время ----------
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const hmFmt = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const dayKey = (ms) => dayFmt.format(new Date(ms));
+  const monthKey = (ms) => dayKey(ms).slice(0, 7);
+  const todayKey = () => dayKey(Date.now());
+  const utcOf = (k) => { const [y, m, d] = k.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+  const keyOfUtc = (ms) => {
+    const d = new Date(ms);
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+  };
+  const addDays = (k, n) => keyOfUtc(utcOf(k) + n * 86400000);
+  const dow = (k) => new Date(utcOf(k)).getUTCDay();
+  const isWeekend = (k) => { const w = dow(k); return w === 0 || w === 6; };
+  const mondayOf = (k) => addDays(k, -((dow(k) + 6) % 7));
+  const dayNum = (k) => Number(k.slice(8));
+  function monthDays(mk) {
+    const [y, m] = mk.split('-').map(Number);
+    const n = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return Array.from({ length: n }, (_, i) => mk + '-' + String(i + 1).padStart(2, '0'));
+  }
+  function minutesOfDay(ms) {
+    let hh = 0, mm = 0;
+    for (const p of hmFmt.formatToParts(new Date(ms))) {
+      if (p.type === 'hour') hh = Number(p.value);
+      if (p.type === 'minute') mm = Number(p.value);
+    }
+    return hh * 60 + mm;
+  }
+  const toTs = (key, hhmm) => Date.parse(key + 'T' + hhmm + ':00+03:00'); // Москва: UTC+3 круглый год
+
+  const fmtTime = (ms) => new Date(ms).toLocaleTimeString('ru-RU', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const fmtDateShort = (k) => new Date(utcOf(k)).toLocaleDateString('ru-RU', { timeZone: 'UTC', day: 'numeric', month: 'short' }).replace('.', '');
+  const fmtDateLong = (k) => cap(new Date(utcOf(k)).toLocaleDateString('ru-RU', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }));
+  const fmtDateRow = (k) => new Date(utcOf(k)).toLocaleDateString('ru-RU', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'long' });
+  const fmtMonth = (mk) => cap(new Date(utcOf(mk + '-01')).toLocaleDateString('ru-RU', { timeZone: 'UTC', month: 'long', year: 'numeric' }));
+  function fmtDur(ms) {
+    const t = Math.max(0, Math.floor(ms / 60000));
+    const hh = Math.floor(t / 60), mm = t % 60;
+    return hh > 0 ? hh + ' ч ' + String(mm).padStart(2, '0') + ' мин' : mm + ' мин';
+  }
+  function fmtClock(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map((n) => String(n).padStart(2, '0')).join(':');
+  }
+  const fmtH = (ms) => String(Math.round((ms / 3600000) * 10) / 10).replace('.', ',');
+  const rangeLabel = (a) => (a.from === a.to ? fmtDateShort(a.from) : fmtDateShort(a.from) + ' – ' + fmtDateShort(a.to));
+
+  // ---------- хранение ----------
+  const state = {
+    user: null, role: null, tab: 'today', month: null, weekStart: null,
+    focus: null, cell: null, fixing: null, confirmDel: null, data: {}, gridScroll: null,
+  };
+  let mode = 'memory'; // db | local | memory
+  let unsub = null;
+  let busy = false;
+  let ticker = null;
+  let live = [];
+  const memory = {};
+
+  const emptyDoc = () => ({ records: [], absences: [] });
+  function normDoc(x) {
+    if (Array.isArray(x)) return { records: clone(x), absences: [] };
+    return {
+      records: Array.isArray(x && x.records) ? clone(x.records) : [],
+      absences: Array.isArray(x && x.absences) ? clone(x.absences) : [],
+    };
+  }
+
+  async function loadDoc(login) {
+    const d = await dbReady;
+    if (d) {
+      try {
+        const snap = await d.doc('attendance/' + login).get();
+        mode = 'db';
+        return snap.exists ? normDoc(snap.data()) : emptyDoc();
+      } catch (e) { /* запасной вариант ниже */ }
+    }
+    try {
+      const raw = localStorage.getItem('att:' + login);
+      mode = 'local';
+      return raw ? normDoc(JSON.parse(raw)) : emptyDoc();
+    } catch (e) {
+      mode = 'memory';
+      return memory[login] ? normDoc(memory[login]) : emptyDoc();
+    }
+  }
+
+  async function saveDoc(login, doc) {
+    const payload = clone(doc);
+    if (mode === 'db') {
+      const d = await dbReady;
+      await d.doc('attendance/' + login).set(payload);
+      return;
+    }
+    if (mode === 'local') {
+      try { localStorage.setItem('att:' + login, JSON.stringify(payload)); return; }
+      catch (e) { mode = 'memory'; }
+    }
+    memory[login] = payload;
+  }
+
+  // Перед изменением берём свежую копию, чтобы не затереть чужую отметку.
+  async function freshDoc(login) {
+    if (mode === 'db') {
+      const d = await dbReady;
+      const snap = await d.doc('attendance/' + login).get();
+      return snap.exists ? normDoc(snap.data()) : emptyDoc();
+    }
+    return clone(state.data[login] || emptyDoc());
+  }
+
+  async function mutate(login, fn) {
+    if (busy) return false;
+    busy = true;
+    try {
+      const next = await freshDoc(login);
+      fn(next);
+      await saveDoc(login, next);
+      state.data[login] = next;
+      return true;
+    } catch (e) {
+      toast('Не удалось сохранить. Попробуйте ещё раз.', true);
+      return false;
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function enterDirector() {
+    const d = await dbReady;
+    if (d) {
+      try {
+        await new Promise((resolve, reject) => {
+          let first = true;
+          unsub = d.collection('attendance').onSnapshot((snap) => {
+            const map = {};
+            for (const w of WORKERS) map[w] = emptyDoc();
+            snap.docs.forEach((x) => { if (WORKERS.includes(x.id)) map[x.id] = normDoc(x.data()); });
+            state.data = map;
+            mode = 'db';
+            if (first) { first = false; resolve(); }
+            else if (!state.fixing && !state.confirmDel && state.user) render();
+          }, (e) => { if (first) { first = false; reject(e); } });
+        });
+        return;
+      } catch (e) {
+        if (unsub) { unsub(); unsub = null; }
+      }
+    }
+    const map = {};
+    for (const w of WORKERS) map[w] = await loadDoc(w);
+    state.data = map;
+  }
+
+  // ---------- расчёты ----------
+  const isMissed = (r) => !!r.missed || (!r.end && dayKey(r.start) !== todayKey());
+
+  function summarize(doc, key) {
+    const now = Date.now();
+    const recs = doc.records.filter((r) => dayKey(r.start) === key).sort((a, b) => a.start - b.start);
+    let worked = 0, open = null, lastEnd = null, present = false;
+    for (const r of recs) {
+      if (isMissed(r)) continue;
+      present = true;
+      if (r.end) { worked += r.end - r.start; lastEnd = Math.max(lastEnd || 0, r.end); }
+      else { open = r; worked += now - r.start; }
+    }
+    const first = recs.length ? recs[0].start : null;
+    const lateMin = first != null ? Math.max(0, minutesOfDay(first) - START_MIN) : 0;
+    const absence = doc.absences.find((a) => a.from <= key && key <= a.to && ABS[a.type]) || null;
+    return { key, recs, worked, open, lastEnd, present, missed: recs.some(isMissed), lateMin, absence };
+  }
+
+  function monthStats(doc, mk) {
+    let worked = 0, daysWorked = 0, lateCount = 0, lateMin = 0, normDays = 0;
+    const abs = { vacation: 0, sick: 0, dayoff: 0 };
+    for (const k of monthDays(mk)) {
+      const s = summarize(doc, k);
+      worked += s.worked;
+      if (s.present) daysWorked++;
+      if (s.lateMin > 0) { lateCount++; lateMin += s.lateMin; }
+      if (!isWeekend(k)) { if (s.absence) abs[s.absence.type]++; else normDays++; }
+    }
+    return { worked, daysWorked, lateCount, lateMin, abs, absTotal: abs.vacation + abs.sick + abs.dayoff, norm: normDays * NORM_H };
+  }
+
+  function weekTotals(doc, ws) {
+    let worked = 0, normDays = 0;
+    for (let i = 0; i < 7; i++) {
+      const k = addDays(ws, i);
+      const s = summarize(doc, k);
+      worked += s.worked;
+      if (!isWeekend(k) && !s.absence) normDays++;
+    }
+    return { worked, norm: normDays * NORM_H };
+  }
+
+  function dayStatus(doc, key) {
+    const s = summarize(doc, key);
+    if (s.open) return { kind: 'in', label: 'На работе', sub: 'с ' + fmtTime(s.open.start), s };
+    if (s.absence) return { kind: s.absence.type, label: ABS[s.absence.type].label, sub: rangeLabel(s.absence), s };
+    if (s.present) return { kind: 'out', label: 'Ушёл', sub: 'в ' + fmtTime(s.lastEnd), s };
+    if (isWeekend(key)) return { kind: 'rest', label: 'Выходной', sub: '', s };
+    return { kind: 'none', label: 'Ещё не пришёл', sub: '', s };
+  }
+
+  function monthsFor(logins) {
+    const set = new Set([monthKey(Date.now())]);
+    if (state.month) set.add(state.month);
+    for (const l of logins) {
+      const doc = state.data[l];
+      if (!doc) continue;
+      doc.records.forEach((r) => set.add(monthKey(r.start)));
+      doc.absences.forEach((a) => { set.add(a.from.slice(0, 7)); set.add(a.to.slice(0, 7)); });
+    }
+    return [...set].sort().reverse();
+  }
+
+  // ---------- вспомогательные элементы ----------
+  function liveText(el, fn) { live.push(() => { el.textContent = fn(); }); }
+  function stopTicker() { if (ticker) clearInterval(ticker); ticker = null; }
+  function startTicker() { if (live.length) ticker = setInterval(() => live.forEach((f) => f()), 1000); }
+
+  let toastTimer = null;
+  function toast(msg, isErr) {
+    let el = document.getElementById('toast');
+    if (!el) { el = h('div', { id: 'toast', class: 'toast', role: 'status' }); document.body.append(el); }
+    el.textContent = msg;
+    el.className = 'toast show' + (isErr ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+  }
+
+  const chip = (kind, text, extra) => h('span', { class: 'chip ' + kind + (extra ? ' ' + extra : '') }, text);
+  const statusChip = (st) => chip(st.kind, st.label);
+  const tile = (label, value, sub, extra) => h('div', { class: 'tile' },
+    h('p', { class: 'tile-l' }, label), h('p', { class: 'tile-v' }, value), sub ? h('p', { class: 'tile-s' }, sub) : null, extra);
+  const monthSelect = (logins) => h('select', {
+    id: 'month', 'aria-label': 'Месяц',
+    onchange: (e) => { state.month = e.target.value; state.gridScroll = null; state.cell = null; render(); },
+  }, monthsFor(logins).map((m) => h('option', { value: m, selected: m === state.month }, fmtMonth(m))));
+
+  function timeline(s, compact) {
+    const span = TL_TO - TL_FROM;
+    const pct = (min) => Math.min(100, Math.max(0, ((min - TL_FROM) / span) * 100));
+    const track = h('div', { class: 'tl-track' });
+    const place = (cls, l, w) => {
+      const el = h('div', { class: cls });
+      el.style.left = l + '%';
+      if (w != null) el.style.width = w + '%';
+      track.append(el);
+    };
+    if (s.lateMin > 0 && s.recs.length) place('tl-late', pct(START_MIN), Math.max(0.5, pct(minutesOfDay(s.recs[0].start)) - pct(START_MIN)));
+    for (const r of s.recs) {
+      if (isMissed(r)) continue;
+      const a = minutesOfDay(r.start);
+      const len = ((r.end || Date.now()) - r.start) / 60000;
+      place('tl-seg' + (r.end ? '' : ' open'), pct(a), Math.max(0.8, pct(a + len) - pct(a)));
+    }
+    place('tl-mark', pct(START_MIN));
+    if (s.key === todayKey()) place('tl-now', pct(minutesOfDay(Date.now())));
+    const axis = h('div', { class: 'tl-axis' });
+    for (const hr of [8, 10, 12, 14, 16, 18]) {
+      const sp = h('span', {}, String(hr));
+      sp.style.left = pct(hr * 60) + '%';
+      axis.append(sp);
+    }
+    return h('div', { class: 'tl' + (compact ? ' compact' : '') }, track, axis);
+  }
+
+  function weekChart(doc, ws) {
+    const W = 360, H = 196, L = 30, R = 6, T = 22, B = 40;
+    const pw = W - L - R, ph = H - T - B, slot = pw / 7, bw = Math.min(30, slot * 0.62);
+    const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+    const sums = days.map((k) => summarize(doc, k));
+    const maxH = Math.max(0, ...sums.map((s) => s.worked / 3600000));
+    const yMax = Math.max(10, Math.ceil(maxH / 2) * 2);
+    const y = (v) => T + ph * (1 - v / yMax);
+    const svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'chart', role: 'img', 'aria-label': 'Часы по дням недели' });
+    const ticks = [0, 4, 8];
+    if (yMax >= 12) ticks.push(12);
+    for (const t of ticks) {
+      svg.append(sv('line', { x1: L, x2: W - R, y1: y(t), y2: y(t), class: t === 8 ? 'g-norm' : 'g-line' }));
+      svg.append(sv('text', { x: L - 6, y: y(t) + 4, class: 'ax', 'text-anchor': 'end' }, String(t)));
+    }
+    svg.append(sv('text', { x: W - R, y: y(8) - 5, class: 'ax-norm', 'text-anchor': 'end' }, 'норма 8 ч'));
+    const today = todayKey();
+    days.forEach((k, i) => {
+      const s = sums[i];
+      const cx = L + slot * i + slot / 2;
+      const x = cx - bw / 2;
+      if (s.worked > 0) {
+        const yy = y(s.worked / 3600000);
+        svg.append(sv('rect', { x, y: yy, width: bw, height: Math.max(1, y(0) - yy), rx: 5, class: 'bar ' + (s.lateMin > 0 ? 'late' : 'ok') }));
+        svg.append(sv('text', { x: cx, y: yy - 5, class: 'val', 'text-anchor': 'middle' }, fmtH(s.worked)));
+      } else if (s.absence) {
+        svg.append(sv('rect', { x, y: y(8), width: bw, height: y(0) - y(8), rx: 5, class: 'bar ab ' + s.absence.type }));
+        svg.append(sv('text', { x: cx, y: y(4) + 5, class: 'ab-l', 'text-anchor': 'middle' }, ABS[s.absence.type].short));
+      }
+      const we = isWeekend(k) ? ' we' : '';
+      const td = k === today ? ' today' : '';
+      svg.append(sv('text', { x: cx, y: H - B + 16, class: 'dl' + we + td, 'text-anchor': 'middle' }, WD_SHORT[dow(k)]));
+      svg.append(sv('text', { x: cx, y: H - B + 31, class: 'dn' + we + td, 'text-anchor': 'middle' }, String(dayNum(k))));
+    });
+    return svg;
+  }
+
+  // ---------- вход ----------
+  function renderLogin(error) {
+    stopTicker();
+    const loginInput = h('input', { id: 'login', name: 'username', type: 'text', autocomplete: 'username', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false', required: true });
+    const passInput = h('input', { id: 'password', name: 'password', type: 'password', autocomplete: 'current-password', required: true });
+    const err = h('div', { class: 'msg err', role: 'alert', hidden: !error }, error || '');
+    const btn = h('button', { class: 'solid', type: 'submit' }, 'Войти');
+    const form = h('form', {
+      class: 'panel',
+      onsubmit: async (e) => {
+        e.preventDefault();
+        const login = loginInput.value.trim().toLowerCase();
+        const u = USERS[login];
+        if (!u || u.pass !== passInput.value) {
+          err.textContent = 'Неверный логин или пароль';
+          err.hidden = false;
+          passInput.value = '';
+          passInput.focus();
+          return;
+        }
+        btn.disabled = true;
+        err.hidden = true;
+        await enter(login);
+      },
+    },
+    h('div', { class: 'field' }, h('label', { for: 'login' }, 'Логин'), loginInput),
+    h('div', { class: 'field' }, h('label', { for: 'password' }, 'Пароль'), passInput),
+    err, btn);
+    const heroIcon = document.createElement('span');
+    heroIcon.innerHTML = BELL;
+    app.replaceChildren(h('div', { class: 'wrap login' },
+      h('div', { class: 'hero' }, heroIcon, h('h1', {}, 'Табель'), h('p', {}, 'Учёт прихода и ухода работников школы. Войдите под своим логином.')),
+      form));
+  }
+
+  async function enter(login) {
+    state.user = login;
+    state.role = USERS[login].role;
+    state.tab = 'today';
+    state.focus = null;
+    state.cell = null;
+    state.fixing = null;
+    state.confirmDel = null;
+    state.month = monthKey(Date.now());
+    state.weekStart = mondayOf(todayKey());
+    state.gridScroll = null;
+    if (state.role === 'director') await enterDirector();
+    else state.data = { [login]: await loadDoc(login) };
+    try { sessionStorage.setItem('att:user', login); } catch (e) { /* не страшно */ }
+    render();
+  }
+
+  function logout() {
+    if (unsub) { unsub(); unsub = null; }
+    state.user = null;
+    state.data = {};
+    try { sessionStorage.removeItem('att:user'); } catch (e) { /* не страшно */ }
+    render();
+  }
+
+  // ---------- каркас ----------
+  function header() {
+    const icon = document.createElement('span');
+    icon.style.display = 'inline-flex';
+    icon.innerHTML = BELL;
+    return h('header', { class: 'bar' },
+      h('div', { class: 'brand' }, icon, h('span', { class: 'brand-name' }, 'Табель')),
+      h('div', { class: 'bar-r' }, h('span', { class: 'who' }, USERS[state.user].name), h('button', { class: 'ghost', type: 'button', onclick: logout }, 'Выйти')));
+  }
+
+  function tabs(items) {
+    return h('nav', { class: 'tabs', role: 'tablist' }, items.map(([id, label]) => h('button', {
+      class: 'tab' + (state.tab === id ? ' on' : ''), type: 'button', role: 'tab',
+      'aria-selected': state.tab === id ? 'true' : 'false',
+      onclick: () => { state.tab = id; state.cell = null; state.fixing = null; state.confirmDel = null; render(); },
+    }, label)));
+  }
+
+  function backBar() {
+    return h('div', { class: 'back' },
+      h('button', { class: 'ghost', type: 'button', onclick: () => { state.focus = null; state.fixing = null; state.confirmDel = null; render(); } }, '← Все работники'),
+      h('h1', { class: 'page-title' }, USERS[state.focus].name));
+  }
+
+  function render() {
+    const old = document.querySelector('.grid-scroll');
+    if (old) state.gridScroll = old.scrollLeft;
+    stopTicker();
+    live = [];
+    if (!state.user) { renderLogin(); return; }
+    let body;
+    if (state.role === 'director') {
+      if (state.focus) body = [backBar(), viewTimesheet(state.focus, true), viewAbsences(state.focus)];
+      else body = [tabs([['today', 'Сегодня'], ['month', 'Месяц']]), state.tab === 'month' ? viewDirMonth() : viewDirToday()];
+    } else {
+      body = [tabs([['today', 'Сегодня'], ['sheet', 'Табель'], ['abs', 'Отсутствия']]),
+        state.tab === 'sheet' ? viewTimesheet(state.user, false) : state.tab === 'abs' ? viewAbsences(state.user) : viewToday(state.user)];
+    }
+    const notes = [];
+    if (mode === 'local') notes.push(h('div', { class: 'msg warn' }, 'Общая база сейчас недоступна, отметки хранятся только на этом устройстве.'));
+    if (mode === 'memory') notes.push(h('div', { class: 'msg warn' }, 'Хранилище недоступно, отметки пропадут после закрытия страницы.'));
+    app.replaceChildren(h('div', { class: 'wrap' }, header(), notes, body));
+    const g = document.querySelector('.grid-scroll');
+    if (g) {
+      if (state.gridScroll != null) g.scrollLeft = state.gridScroll;
+      else if (state.month === monthKey(Date.now())) g.scrollLeft = Math.max(0, (dayNum(todayKey()) - 1) * CELL_W - 90);
+    }
+    startTicker();
+  }
+
+  // ---------- работник: Сегодня ----------
+  async function clockToggle(login) {
+    let message = '';
+    const ok = await mutate(login, (doc) => {
+      const key = todayKey();
+      const o = doc.records.find((r) => !r.end && !r.missed && dayKey(r.start) === key);
+      const t = Date.now();
+      if (o) {
+        o.end = t;
+        message = 'Уход отмечен в ' + fmtTime(t);
+      } else {
+        const hadToday = doc.records.some((r) => dayKey(r.start) === key);
+        doc.records.push({ id: t, start: t, end: null });
+        const late = minutesOfDay(t) - START_MIN;
+        message = 'Приход отмечен в ' + fmtTime(t) + (!hadToday && late > 0 ? ' · опоздание ' + late + ' мин' : '');
+      }
+    });
+    if (ok) toast(message);
+    render();
+  }
+
+  function viewToday(login) {
+    const doc = state.data[login];
+    const key = todayKey();
+    const s = summarize(doc, key);
+    const inside = !!s.open;
+    const clock = h('div', { class: 'clock' }, inside ? fmtClock(Date.now() - s.open.start) : fmtDur(s.worked));
+    if (inside) liveText(clock, () => fmtClock(Date.now() - s.open.start));
+    const chips = [];
+    if (s.lateMin > 0) chips.push(chip('late', 'Опоздание ' + s.lateMin + ' мин'));
+    if (s.absence) chips.push(chip(s.absence.type, ABS[s.absence.type].label + ' · ' + rangeLabel(s.absence)));
+    const board = h('section', { class: 'board' + (inside ? ' in' : '') },
+      h('div', { class: 'board-top' },
+        h('span', { class: 'pill' }, h('i', { class: 'dot' }), inside ? 'Вы на работе' : 'Вы не на работе'),
+        h('span', { class: 'date' }, fmtDateLong(key))),
+      clock,
+      h('p', { class: 'note' }, inside ? 'Пришли в ' + fmtTime(s.open.start) : (s.worked > 0 ? 'Отработано сегодня' : 'Сегодня приход ещё не отмечен')),
+      chips.length ? h('div', { class: 'chips' }, chips) : null);
+
+    const act = h('button', { class: 'act ' + (inside ? 'out' : 'in'), type: 'button', onclick: () => clockToggle(login) }, inside ? 'Ушёл' : 'Пришёл');
+
+    const mk = monthKey(Date.now());
+    const ms = monthStats(doc, mk);
+    const wt = weekTotals(doc, mondayOf(key));
+    const missedCount = doc.records.filter((r) => isMissed(r) && monthKey(r.start) === mk).length;
+
+    const tl = h('section', { class: 'panel' },
+      h('div', { class: 'panel-h' }, h('h2', {}, 'Сегодня на шкале'), h('span', { class: 'muted' }, 'начало работы 8:30')),
+      timeline(s, false));
+
+    const tiles = h('div', { class: 'tiles' },
+      tile('За неделю', fmtDur(wt.worked), 'из ' + wt.norm + ' ч по норме'),
+      tile('За месяц', fmtDur(ms.worked), 'из ' + ms.norm + ' ч по норме'),
+      tile('Опоздания', String(ms.lateCount), ms.lateCount ? 'всего ' + ms.lateMin + ' мин за месяц' : 'в этом месяце нет'));
+
+    return h('div', { class: 'wrap' }, board, act, tl, tiles,
+      missedCount ? h('div', { class: 'msg warn' }, 'Не отмечен уход: ' + missedCount + '. Такие дни в часы не входят, обратитесь к директору.') : null);
+  }
+
+  // ---------- табель (работник и директор) ----------
+  async function saveFix(login, rec) {
+    const input = document.getElementById('fix-time');
+    const val = input && input.value;
+    if (!val) { toast('Укажите время ухода', true); return; }
+    const ts = toTs(dayKey(rec.start), val);
+    if (!(ts > rec.start)) { toast('Уход не может быть раньше прихода', true); return; }
+    const ok = await mutate(login, (doc) => {
+      const r = doc.records.find((x) => x.id === rec.id);
+      if (r) { r.end = ts; delete r.missed; r.fixed = true; }
+    });
+    if (ok) { state.fixing = null; toast('Время ухода указано'); render(); }
+  }
+
+  function historyRows(login, mk, director) {
+    const doc = state.data[login];
+    const rows = [];
+    const shown = new Set();
+    for (const key of monthDays(mk).reverse()) {
+      const s = summarize(doc, key);
+      if (s.recs.length) {
+        s.recs.forEach((r, i) => {
+          const miss = isMissed(r);
+          const arrive = h('div', { class: 'cellbox' }, fmtTime(r.start), i === 0 && s.lateMin > 0 ? chip('late', '+' + s.lateMin + ' мин', 'sm') : null);
+          let leave;
+          if (miss) {
+            if (director && state.fixing === r.id) {
+              leave = h('div', { class: 'fix' },
+                h('input', { id: 'fix-time', type: 'time', value: '16:00', 'aria-label': 'Время ухода' }),
+                h('button', { class: 'mini', type: 'button', onclick: () => saveFix(login, r) }, 'Сохранить'),
+                h('button', { class: 'mini plain', type: 'button', onclick: () => { state.fixing = null; render(); } }, 'Отмена'));
+            } else {
+              leave = h('div', { class: 'cellbox' }, chip('warn', 'уход не отмечен', 'sm'),
+                director ? h('button', { class: 'link', type: 'button', onclick: () => { state.fixing = r.id; render(); } }, 'Указать уход') : null);
+            }
+          } else if (r.end) {
+            leave = h('div', { class: 'cellbox' }, fmtTime(r.end), r.fixed ? chip('rest', 'указал директор', 'sm') : null);
+          } else {
+            leave = h('span', { class: 'muted' }, 'на работе');
+          }
+          const total = miss ? h('span', { class: 'muted' }, '—') : fmtDur((r.end || Date.now()) - r.start);
+          rows.push(h('tr', {}, h('td', { class: 'd' }, i === 0 ? fmtDateRow(key) : ''), h('td', { class: 'nw' }, arrive), h('td', { class: 'nw' }, leave), h('td', { class: 'nw' }, total)));
+        });
+      } else if (s.absence && !shown.has(s.absence.id)) {
+        shown.add(s.absence.id);
+        const a = s.absence;
+        rows.push(h('tr', {},
+          h('td', { class: 'd' }, rangeLabel(a)),
+          h('td', { colspan: '3' }, h('div', { class: 'cellbox' }, chip(a.type, ABS[a.type].label), a.note ? h('span', { class: 'muted' }, a.note) : null))));
+      }
+    }
+    return rows;
+  }
+
+  function viewTimesheet(login, director) {
+    const doc = state.data[login];
+    const mk = state.month;
+    const ms = monthStats(doc, mk);
+    const pct = ms.norm ? Math.min(100, (ms.worked / (ms.norm * 3600000)) * 100) : 0;
+    const prog = h('div', { class: 'prog' }, h('i', {}));
+    prog.firstChild.style.width = pct + '%';
+
+    const toolbar = h('div', { class: 'panel-h' }, monthSelect([login]),
+      h('button', { class: 'mini', type: 'button', onclick: () => exportCsv([login], mk) }, 'Скачать табель'));
+
+    const tiles = h('div', { class: 'tiles' },
+      tile('Отработано', fmtDur(ms.worked), 'из ' + ms.norm + ' ч по норме', prog),
+      tile('Дней на работе', String(ms.daysWorked), 'рабочая неделя пн–пт'),
+      tile('Опоздания', String(ms.lateCount), ms.lateCount ? 'всего ' + ms.lateMin + ' мин после 8:30' : 'нет'),
+      tile('Отсутствия', ms.absTotal + ' дн.', ms.absTotal ? 'отпуск ' + ms.abs.vacation + ' · больничный ' + ms.abs.sick + ' · отгул ' + ms.abs.dayoff : 'нет'));
+
+    const ws = state.weekStart;
+    const curWeek = mondayOf(todayKey());
+    const wt = weekTotals(doc, ws);
+    const nav = h('div', { class: 'wk-nav' },
+      h('button', { type: 'button', 'aria-label': 'Предыдущая неделя', onclick: () => { state.weekStart = addDays(ws, -7); render(); } }, '‹'),
+      h('span', { class: 'wk-title' }, fmtDateShort(ws) + ' – ' + fmtDateShort(addDays(ws, 6))),
+      h('button', { type: 'button', 'aria-label': 'Следующая неделя', disabled: ws >= curWeek, onclick: () => { state.weekStart = addDays(ws, 7); render(); } }, '›'));
+    const week = h('section', { class: 'panel' },
+      h('div', { class: 'panel-h' }, h('h2', {}, 'Неделя'), nav),
+      h('p', { class: 'muted' }, 'Отработано ' + fmtDur(wt.worked) + ' из ' + wt.norm + ' ч'),
+      weekChart(doc, ws),
+      h('div', { class: 'legend' },
+        h('span', {}, h('i', { class: 'sw' }), 'вовремя'), h('span', {}, h('i', { class: 'sw late' }), 'опоздание'),
+        h('span', {}, h('i', { class: 'sw vacation' }), 'отпуск'), h('span', {}, h('i', { class: 'sw sick' }), 'больничный'), h('span', {}, h('i', { class: 'sw dayoff' }), 'отгул')));
+
+    const rows = historyRows(login, mk, director);
+    const history = h('section', { class: 'panel' },
+      h('div', { class: 'panel-h' }, h('h2', {}, 'Табель')),
+      rows.length
+        ? h('div', { class: 'scroll' }, h('table', {},
+          h('thead', {}, h('tr', {}, h('th', {}, 'Дата'), h('th', {}, 'Пришёл'), h('th', {}, 'Ушёл'), h('th', {}, 'Итого'))),
+          h('tbody', {}, rows)))
+        : h('p', { class: 'empty' }, 'В этом месяце отметок нет.'));
+
+    return h('div', { class: 'wrap' }, toolbar, tiles, week, history);
+  }
+
+  // ---------- отсутствия ----------
+  function weekdaysIn(a) {
+    let n = 0;
+    for (let k = a.from; k <= a.to; k = addDays(k, 1)) if (!isWeekend(k)) n++;
+    return n;
+  }
+
+  function viewAbsences(login) {
+    const doc = state.data[login];
+    const today = todayKey();
+    const err = h('div', { class: 'msg err', role: 'alert', hidden: true });
+    const typeSel = h('select', { id: 'abs-type', 'aria-label': 'Тип' }, Object.entries(ABS).map(([id, v]) => h('option', { value: id }, v.label)));
+    typeSel.style.width = '100%';
+    const fromI = h('input', { id: 'abs-from', type: 'date', value: today, required: true });
+    const toI = h('input', { id: 'abs-to', type: 'date', value: today, required: true });
+    const noteI = h('input', { id: 'abs-note', type: 'text', maxlength: '80', placeholder: 'Например: поездка к врачу' });
+    const fail = (t) => { err.textContent = t; err.hidden = false; };
+
+    const form = h('form', {
+      class: 'panel',
+      onsubmit: async (e) => {
+        e.preventDefault();
+        err.hidden = true;
+        const from = fromI.value, to = toI.value;
+        if (!from || !to) return fail('Укажите обе даты');
+        if (to < from) return fail('Дата окончания раньше начала');
+        if ((utcOf(to) - utcOf(from)) / 86400000 > 180) return fail('Период длиннее 180 дней');
+        const clash = doc.absences.find((a) => a.from <= to && a.to >= from);
+        if (clash) return fail('Эти даты пересекаются с записью «' + ABS[clash.type].label + ' ' + rangeLabel(clash) + '»');
+        const entry = { id: Date.now(), type: typeSel.value, from, to, note: noteI.value.trim().slice(0, 80) };
+        const ok = await mutate(login, (d) => { d.absences.push(entry); });
+        if (ok) { toast('Запись добавлена'); render(); }
+      },
+    },
+    h('div', { class: 'panel-h' }, h('h2', {}, 'Добавить отсутствие')),
+    h('div', { class: 'form-row' },
+      h('div', { class: 'field' }, h('label', { for: 'abs-type' }, 'Тип'), typeSel),
+      h('div', { class: 'field' }, h('label', { for: 'abs-from' }, 'С'), fromI),
+      h('div', { class: 'field' }, h('label', { for: 'abs-to' }, 'По'), toI)),
+    h('div', { class: 'field' }, h('label', { for: 'abs-note' }, 'Примечание'), noteI),
+    err,
+    h('button', { class: 'solid', type: 'submit' }, 'Добавить'));
+
+    const sorted = [...doc.absences].sort((a, b) => (a.from < b.from ? 1 : -1));
+    const list = h('section', { class: 'panel' },
+      h('div', { class: 'panel-h' }, h('h2', {}, 'Записи')),
+      sorted.length
+        ? h('ul', { class: 'abs-list' }, sorted.map((a) => {
+          const confirming = state.confirmDel === a.id;
+          return h('li', { class: 'abs-item' },
+            h('div', { class: 'abs-main' },
+              h('div', { class: 'chips' }, chip(a.type in ABS ? a.type : 'rest', (ABS[a.type] || { label: 'Другое' }).label)),
+              h('span', { class: 'rng' }, rangeLabel(a) + ' · ' + weekdaysIn(a) + ' раб. дн.'),
+              a.note ? h('span', { class: 'nt' }, a.note) : null),
+            h('div', { class: 'abs-act' }, confirming
+              ? [h('button', { class: 'mini danger', type: 'button', onclick: async () => {
+                const ok = await mutate(login, (d) => { d.absences = d.absences.filter((x) => x.id !== a.id); });
+                if (ok) { state.confirmDel = null; toast('Запись удалена'); render(); }
+              } }, 'Удалить'), h('button', { class: 'mini plain', type: 'button', onclick: () => { state.confirmDel = null; render(); } }, 'Отмена')]
+              : h('button', { class: 'mini plain', type: 'button', onclick: () => { state.confirmDel = a.id; render(); } }, 'Убрать')));
+        }))
+        : h('p', { class: 'empty' }, 'Пока нет записей об отпуске, больничном или отгуле.'));
+
+    return h('div', { class: 'wrap' }, form, list);
+  }
+
+  // ---------- директор: Сегодня ----------
+  function viewDirToday() {
+    const key = todayKey();
+    const mk = monthKey(Date.now());
+    const sts = WORKERS.map((w) => ({ w, st: dayStatus(state.data[w], key) }));
+    const inNow = sts.filter((x) => x.st.kind === 'in').length;
+    const late = sts.filter((x) => x.st.s.lateMin > 0).length;
+    const away = sts.filter((x) => ['vacation', 'sick', 'dayoff'].includes(x.st.kind)).length;
+
+    const tiles = h('div', { class: 'tiles' },
+      tile('На месте сейчас', inNow + ' из ' + WORKERS.length),
+      tile('Опоздали сегодня', String(late), late ? 'после 8:30' : 'никто'),
+      tile('Отсутствуют', String(away), away ? 'отпуск, больничный или отгул' : 'все на графике'));
+
+    const cards = h('div', { class: 'cards' }, sts.map(({ w, st }) => {
+      const s = st.s;
+      const missed = state.data[w].records.filter((r) => isMissed(r) && monthKey(r.start) === mk).length;
+      const foot = h('b', {}, fmtDur(s.worked));
+      if (st.kind === 'in') liveText(foot, () => fmtDur(summarize(state.data[w], key).worked));
+      return h('button', { class: 'wcard', type: 'button', onclick: () => { state.focus = w; state.fixing = null; state.confirmDel = null; render(); } },
+        h('div', { class: 'wc-top' }, h('span', { class: 'wc-name' }, USERS[w].name), statusChip(st)),
+        h('p', { class: 'wc-sub' }, st.sub, s.lateMin > 0 ? chip('late', 'Опоздание ' + s.lateMin + ' мин', 'sm') : null, missed ? chip('warn', 'уход не отмечен: ' + missed, 'sm') : null),
+        timeline(s, true),
+        h('div', { class: 'wc-foot' }, h('span', {}, 'Сегодня'), foot));
+    }));
+
+    return h('div', { class: 'wrap' }, h('p', { class: 'kicker' }, fmtDateLong(key)), tiles, cards);
+  }
+
+  // ---------- директор: Месяц ----------
+  function viewDirMonth() {
+    const mk = state.month;
+    const toolbar = h('div', { class: 'panel-h' }, monthSelect(WORKERS),
+      h('button', { class: 'mini', type: 'button', onclick: () => exportCsv(WORKERS, mk) }, 'Скачать табель'));
+
+    const sumRows = WORKERS.map((w) => {
+      const ms = monthStats(state.data[w], mk);
+      return h('tr', {},
+        h('td', {}, h('button', { class: 'link', type: 'button', onclick: () => { state.focus = w; render(); } }, USERS[w].name)),
+        h('td', {}, fmtDur(ms.worked), ' ', h('small', {}, '/ ' + ms.norm + ' ч')),
+        h('td', {}, String(ms.daysWorked)),
+        h('td', {}, ms.lateCount ? ms.lateCount + ' (' + ms.lateMin + ' мин)' : '0'),
+        h('td', {}, ms.absTotal ? ms.absTotal + ' дн.' : '—'));
+    });
+    const summary = h('section', { class: 'panel' },
+      h('div', { class: 'panel-h' }, h('h2', {}, 'Итоги')),
+      h('div', { class: 'scroll' }, h('table', { class: 'sum' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'Работник'), h('th', {}, 'Часы'), h('th', {}, 'Дней'), h('th', {}, 'Опозданий'), h('th', {}, 'Отсутствия'))),
+        h('tbody', {}, sumRows))));
+
+    return h('div', { class: 'wrap' }, toolbar, summary, gridPanel(mk));
+  }
+
+  function gridPanel(mk) {
+    const days = monthDays(mk);
+    const today = todayKey();
+    const detail = h('div', { class: 'detail' });
+
+    function cellInfo(w, k) {
+      const s = summarize(state.data[w], k);
+      if (s.present) {
+        const hrs = Math.round(s.worked / 3600000);
+        return { s, cls: s.lateMin > 0 ? 'late' : 'ok', text: hrs > 0 ? String(hrs) : '·' };
+      }
+      if (s.absence) return { s, cls: s.absence.type, text: ABS[s.absence.type].short };
+      if (s.missed) return { s, cls: 'miss', text: '!' };
+      if (k > today) return { s, cls: 'fut', text: '' };
+      if (isWeekend(k)) return { s, cls: 'we', text: '' };
+      return { s, cls: '', text: '' };
+    }
+
+    function showDetail(w, k) {
+      const { s } = cellInfo(w, k);
+      const lines = [];
+      if (s.absence) lines.push(h('li', {}, chip(s.absence.type, ABS[s.absence.type].label + ' · ' + rangeLabel(s.absence)), s.absence.note ? ' ' + s.absence.note : ''));
+      s.recs.forEach((r) => {
+        const miss = isMissed(r);
+        lines.push(h('li', {}, fmtTime(r.start) + ' – ' + (r.end ? fmtTime(r.end) + ' (' + fmtDur(r.end - r.start) + ')' : miss ? 'уход не отмечен' : 'на работе')));
+      });
+      if (!lines.length) lines.push(h('li', { class: 'muted' }, isWeekend(k) ? 'Выходной, отметок нет' : k > today ? 'Этот день ещё не наступил' : 'Отметок нет'));
+      detail.replaceChildren(...[
+        h('h3', {}, USERS[w].name + ' · ' + fmtDateLong(k)),
+        s.lateMin > 0 ? h('div', { class: 'chips' }, chip('late', 'Опоздание ' + s.lateMin + ' мин')) : null,
+        h('ul', {}, lines),
+        h('div', {}, h('button', { class: 'mini plain', type: 'button', onclick: () => { state.focus = w; render(); } }, 'Открыть табель работника')),
+      ].filter(Boolean));
+    }
+
+    const head = h('tr', {}, h('th', { class: 'g-name' }),
+      days.map((k) => h('th', { class: 'g-day' + (isWeekend(k) ? ' we' : '') + (k === today ? ' today' : '') }, h('span', {}, WD_SHORT[dow(k)]), h('b', {}, String(dayNum(k))))));
+
+    const buttons = [];
+    const body = WORKERS.map((w) => h('tr', {},
+      h('th', { class: 'g-name' }, h('button', { class: 'link', type: 'button', onclick: () => { state.focus = w; render(); } }, USERS[w].name)),
+      days.map((k) => {
+        const info = cellInfo(w, k);
+        const b = h('button', {
+          class: 'cell ' + info.cls + (k === today ? ' today' : '') + (state.cell && state.cell.w === w && state.cell.k === k ? ' sel' : ''),
+          type: 'button', 'aria-label': USERS[w].name + ', ' + fmtDateShort(k),
+          onclick: () => {
+            state.cell = { w, k };
+            buttons.forEach((x) => x.classList.remove('sel'));
+            b.classList.add('sel');
+            showDetail(w, k);
+          },
+        }, info.text);
+        buttons.push(b);
+        return h('td', {}, b);
+      })));
+
+    if (state.cell) showDetail(state.cell.w, state.cell.k);
+    else detail.append(h('p', { class: 'muted' }, 'Нажмите на день, чтобы увидеть отметки.'));
+
+    return h('section', { class: 'panel' },
+      h('div', { class: 'panel-h' }, h('h2', {}, 'Табель месяца')),
+      h('div', { class: 'grid-scroll' }, h('table', { class: 'grid' }, h('thead', {}, head), h('tbody', {}, body))),
+      h('div', { class: 'legend' },
+        h('span', {}, h('i', { class: 'sw' }), 'вовремя (часы)'), h('span', {}, h('i', { class: 'sw late' }), 'опоздание'),
+        h('span', {}, h('i', { class: 'sw vacation' }), 'О отпуск'), h('span', {}, h('i', { class: 'sw sick' }), 'Б больничный'),
+        h('span', {}, h('i', { class: 'sw dayoff' }), 'Г отгул'), h('span', {}, h('i', { class: 'sw miss' }), '! уход не отмечен')),
+      detail);
+  }
+
+  // ---------- экспорт ----------
+  const csvCell = (v) => {
+    const s = String(v == null ? '' : v);
+    return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const csvRow = (a) => a.map(csvCell).join(';');
+  const hrs = (ms) => (ms / 3600000).toFixed(2).replace('.', ',');
+
+  function buildCsv(logins, mk) {
+    const lines = [];
+    lines.push(csvRow(['Табель за ' + fmtMonth(mk)]));
+    lines.push(csvRow(['Опоздание считается после', '8:30']));
+    lines.push('');
+    lines.push(csvRow(['Работник', 'Отработано, ч', 'Норма, ч', 'Дней на работе', 'Опозданий', 'Опоздания, мин', 'Отпуск, дн.', 'Больничный, дн.', 'Отгул, дн.']));
+    for (const l of logins) {
+      const ms = monthStats(state.data[l], mk);
+      lines.push(csvRow([USERS[l].name, hrs(ms.worked), ms.norm, ms.daysWorked, ms.lateCount, ms.lateMin, ms.abs.vacation, ms.abs.sick, ms.abs.dayoff]));
+    }
+    lines.push('');
+    lines.push(csvRow(['Работник', 'Дата', 'Тип', 'Пришёл', 'Ушёл', 'Часов', 'Опоздание, мин', 'Примечание']));
+    for (const l of logins) {
+      for (const k of monthDays(mk)) {
+        const s = summarize(state.data[l], k);
+        const date = k.split('-').reverse().join('.');
+        s.recs.forEach((r, i) => {
+          const miss = isMissed(r);
+          lines.push(csvRow([USERS[l].name, date, miss ? 'Уход не отмечен' : 'Работа', fmtTime(r.start), r.end ? fmtTime(r.end) : '',
+            r.end && !miss ? hrs(r.end - r.start) : '', i === 0 && s.lateMin > 0 ? s.lateMin : '', r.fixed ? 'Уход указал директор' : '']));
+        });
+        if (s.absence) lines.push(csvRow([USERS[l].name, date, ABS[s.absence.type].label, '', '', '', '', s.absence.note || '']));
+      }
+    }
+    return '﻿' + lines.join('\r\n');
+  }
+
+  async function exportCsv(logins, mk) {
+    const dl = await dlReady;
+    if (!dl) { toast('Скачивание здесь недоступно', true); return; }
+    try {
+      await dl.save({ filename: 'tabel-' + mk + (logins.length === 1 ? '-' + logins[0] : '') + '.csv', data: buildCsv(logins, mk) });
+      toast('Файл сохранён');
+    } catch (e) {
+      if (e && e.code === 'declined') return;
+      toast('Не удалось сохранить файл', true);
+    }
+  }
+
+  // ---------- запуск ----------
+  let remembered = null;
+  try { remembered = sessionStorage.getItem('att:user'); } catch (e) { /* не страшно */ }
+  if (remembered && USERS[remembered]) enter(remembered);
+  else renderLogin();
+})();
+</script>
+
+</body></html>
